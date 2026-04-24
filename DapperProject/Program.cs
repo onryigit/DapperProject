@@ -1,8 +1,14 @@
+using DapperProject.Context;
 using DapperProject.Services.CustomerServices;
+using DapperProject.Services.ProductServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Dependency Injection (Bağımlılık) Kayıtları
+builder.Services.AddScoped<DapperContext>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
@@ -27,6 +33,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
-
 
 app.Run();
