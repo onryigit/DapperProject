@@ -1,0 +1,130 @@
+@model PagedResult<TradeLog>
+@{
+    ViewData["Title"] = "İşlem Verileri";
+    int? searchId = ViewBag.SearchId;
+    var startPage = Math.Max(1, Model.Page - 2);
+    var endPage = Math.Min(Model.TotalPages, startPage + 4);
+    startPage = Math.Max(1, endPage - 4);
+}
+
+<section class="page-heading trades-heading">
+    <div><span class="eyebrow">BIG DATA EXPLORER</span><h1>İşlem Verileri</h1><p>Bir milyon kayıt üzerinde sunucu taraflı, yüksek performanslı veri yönetimi.</p></div>
+    <div class="record-counter"><i></i><span><strong>@Model.TotalCount.ToString("N0")</strong> toplam kayıt</span></div>
+</section>
+
+@if (TempData["Success"] is string success)
+{
+    <div class="toast-message success"><span>✓</span>@success<button type="button">×</button></div>
+}
+@if (TempData["Error"] is string error)
+{
+    <div class="toast-message error"><span>!</span>@error<button type="button">×</button></div>
+}
+
+<section class="panel data-toolbar">
+    <div class="id-search">
+        <label for="tradeIdSearch">İŞLEM ID İLE HIZLI ARAMA</label>
+        <div class="search-box"><svg viewBox="0 0 24 24"><path d="m21 20-5.2-5.2a7 7 0 1 0-1 1L20 21l1-1ZM5 10.5a5.5 5.5 0 1 1 11 0 5.5 5.5 0 0 1-11 0Z"/></svg><input id="tradeIdSearch" type="number" min="1" placeholder="Örn. 482391" value="@searchId" /><button id="searchTradeButton" type="button">İşlemi Bul</button></div>
+        <small>Birincil anahtar indeksi üzerinden milisaniyelik sorgu</small>
+    </div>
+    <div class="page-size-control">
+        <label>Sayfa başına</label>
+        <select id="pageSizeSelect" aria-label="Sayfa başına kayıt">
+            <option value="20" selected="@(Model.PageSize == 20)">20 kayıt</option>
+            <option value="50" selected="@(Model.PageSize == 50)">50 kayıt</option>
+        </select>
+    </div>
+</section>
+
+<section class="panel data-panel">
+    <div class="panel-head table-title">
+        <div><span class="eyebrow">TRADE LOGS</span><h2>İşlem Kayıtları</h2></div>
+        @if (searchId.HasValue) { <a asp-action="Index" asp-route-pageSize="@Model.PageSize" class="clear-filter">ID filtresini temizle ×</a> }
+    </div>
+    <div class="table-responsive">
+        <table class="trade-table data-table">
+            <thead><tr><th>ID</th><th>KULLANICI</th><th>PARİTE</th><th>TÜR</th><th>FİYAT</th><th>MİKTAR</th><th>TOPLAM USD</th><th>ÜLKE</th><th>HIZ</th><th>TARİH</th><th>İŞLEM</th></tr></thead>
+            <tbody>
+            @foreach (var trade in Model.Items)
+            {
+                <tr>
+                    <td><button class="id-link view-trade" data-id="@trade.Id">#@trade.Id</button></td>
+                    <td><span class="user-code">@trade.UserCode</span></td>
+                    <td><span class="pair-cell"><i>@trade.CryptoPair[..1]</i><strong>@trade.CryptoPair</strong></span></td>
+                    <td><span class="trade-badge @trade.TradeType.ToLowerInvariant()">@trade.TradeType</span></td>
+                    <td>$@trade.Price.ToString("N4")</td>
+                    <td>@trade.Quantity.ToString("N5")</td>
+                    <td><strong class="money">$@trade.TotalUSD.ToString("N2")</strong></td>
+                    <td>@trade.LocationCountry</td>
+                    <td><span class="speed"><i></i>@trade.ExecutionTimeMs ms</span></td>
+                    <td><span class="date-cell">@trade.TransactionDate.ToString("dd MMM yyyy")<small>@trade.TransactionDate.ToString("HH:mm:ss")</small></span></td>
+                    <td>
+                        <div class="row-actions">
+                            <button type="button" class="icon-action edit" title="Düzenle"
+                                    data-bs-toggle="modal" data-bs-target="#editTradeModal"
+                                    data-id="@trade.Id" data-user="@trade.UserCode" data-pair="@trade.CryptoPair" data-type="@trade.TradeType"
+                                    data-price="@trade.Price.ToString(CultureInfo.InvariantCulture)" data-quantity="@trade.Quantity.ToString(CultureInfo.InvariantCulture)"
+                                    data-fee="@trade.FeeUSD.ToString(CultureInfo.InvariantCulture)" data-country="@trade.LocationCountry"
+                                    data-speed="@trade.ExecutionTimeMs" data-date="@trade.TransactionDate.ToString("yyyy-MM-ddTHH:mm")">✎</button>
+                            <form asp-action="Delete" asp-route-id="@trade.Id" method="post" class="delete-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="returnPage" value="@Model.Page" /><input type="hidden" name="pageSize" value="@Model.PageSize" />
+                                <button type="submit" class="icon-action delete" title="Sil" data-id="@trade.Id">⌫</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+            @if (Model.Items.Count == 0)
+            {
+                <tr><td colspan="11"><div class="empty-state"><strong>Kayıt bulunamadı</strong><span>Aradığınız ID veri setinde yer almıyor olabilir.</span></div></td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <footer class="pagination-footer">
+        <span>@Model.TotalCount.ToString("N0") kayıttan <strong>@Model.FirstItem.ToString("N0")–@Model.LastItem.ToString("N0")</strong> arası gösteriliyor</span>
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="pagination-nav" aria-label="Sayfalar">
+                <a class="page-arrow @(Model.Page == 1 ? "disabled" : "")" asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-pageSize="@Model.PageSize" asp-route-id="@searchId">‹</a>
+                @for (var p = startPage; p <= endPage; p++)
+                {
+                    <a class="@(p == Model.Page ? "active" : "")" asp-action="Index" asp-route-page="@p" asp-route-pageSize="@Model.PageSize" asp-route-id="@searchId">@p</a>
+                }
+                @if (endPage < Model.TotalPages) { <span>…</span><a asp-action="Index" asp-route-page="@Model.TotalPages" asp-route-pageSize="@Model.PageSize">@Model.TotalPages.ToString("N0")</a> }
+                <a class="page-arrow @(Model.Page >= Model.TotalPages ? "disabled" : "")" asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-pageSize="@Model.PageSize" asp-route-id="@searchId">›</a>
+            </nav>
+        }
+    </footer>
+</section>
+
+<div class="modal fade fintech-modal" id="editTradeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content">
+        <form asp-action="Update" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnPage" value="@Model.Page" /><input type="hidden" name="pageSize" value="@Model.PageSize" /><input type="hidden" name="Id" id="editId" />
+            <div class="modal-header"><div><span class="eyebrow">KAYIT YÖNETİMİ</span><h2>İşlemi Düzenle <small id="editIdLabel"></small></h2></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body"><div class="form-grid">
+                <label>Kullanıcı Kodu<input name="UserCode" id="editUser" maxlength="20" required /></label>
+                <label>Parite<select name="CryptoPair" id="editPair" required><option>BTC/USDT</option><option>ETH/USDT</option><option>BNB/USDT</option><option>SOL/USDT</option><option>XRP/USDT</option><option>ADA/USDT</option><option>AVAX/USDT</option><option>DOGE/USDT</option></select></label>
+                <label>İşlem Türü<select name="TradeType" id="editType" required><option>BUY</option><option>SELL</option></select></label>
+                <label>Fiyat (USD)<input type="number" name="Price" id="editPrice" min="0.00000001" step="0.00000001" required /></label>
+                <label>Miktar<input type="number" name="Quantity" id="editQuantity" min="0.00000001" step="0.00000001" required /></label>
+                <label>Komisyon (USD)<input type="number" name="FeeUSD" id="editFee" min="0" step="0.0001" required /></label>
+                <label>Ülke<input name="LocationCountry" id="editCountry" maxlength="60" required /></label>
+                <label>İşlem Hızı (ms)<input type="number" name="ExecutionTimeMs" id="editSpeed" min="1" max="10000" required /></label>
+                <label class="full">İşlem Tarihi<input type="datetime-local" name="TransactionDate" id="editDate" required /></label>
+            </div></div>
+            <div class="modal-footer"><button type="button" class="btn-cancel" data-bs-dismiss="modal">Vazgeç</button><button type="submit" class="btn-primary-fintech">Değişiklikleri Kaydet</button></div>
+        </form>
+    </div></div>
+</div>
+
+<div class="modal fade fintech-modal" id="detailTradeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header"><div><span class="eyebrow">ANLIK ID SORGUSU</span><h2>İşlem Detayı</h2></div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" id="tradeDetailBody"><div class="modal-loading">Veri getiriliyor…</div></div></div></div>
+</div>
+
+<div class="confirm-dialog" id="deleteConfirm" role="dialog" aria-modal="true" aria-hidden="true"><div><span class="danger-icon">!</span><h3>İşlem silinsin mi?</h3><p id="deleteMessage">Bu işlem kalıcı olarak silinecek.</p><div><button id="cancelDelete">Vazgeç</button><button id="confirmDelete">Evet, Sil</button></div></div></div>
+
+@section Scripts { <script src="~/js/trades.js" asp-append-version="true"></script> }

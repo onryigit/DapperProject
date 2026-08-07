@@ -1,47 +1,61 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="tr">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - DapperProject</title>
-    <script type="importmap"></script>
+    <meta name="theme-color" content="#0b0e11" />
+    <title>@ViewData["Title"] · TradePulse</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/DapperProject.styles.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">DapperProject</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                </div>
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar">
+            <a class="brand" asp-controller="Dashboard" asp-action="Index">
+                <span class="brand-mark"><span></span></span>
+                <span><strong>Trade</strong>Pulse</span>
+            </a>
+            <div class="workspace-label">ANALİZ MERKEZİ</div>
+            <nav class="side-nav">
+                <a class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")" asp-controller="Dashboard" asp-action="Index">
+                    <svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/></svg>
+                    Dashboard
+                </a>
+                <a class="@(ViewContext.RouteData.Values["controller"]?.ToString() == "Trades" ? "active" : "")" asp-controller="Trades" asp-action="Index">
+                    <svg viewBox="0 0 24 24"><path d="M4 5h16v3H4V5Zm0 5h16v3H4v-3Zm0 5h16v3H4v-3Z"/></svg>
+                    İşlem Verileri
+                </a>
+            </nav>
+            <div class="sidebar-status">
+                <span class="status-dot"></span>
+                <div><strong>Sistem çevrimiçi</strong><small>SQL · Dapper bağlantısı</small></div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+            <div class="sidebar-user">
+                <span class="avatar">TP</span>
+                <div><strong>TradePulse Admin</strong><small>Big Data Analyst</small></div>
+            </div>
+        </aside>
+
+        <div class="main-area">
+            <header class="topbar">
+                <button class="menu-toggle" id="menuToggle" aria-label="Menüyü aç"><span></span><span></span><span></span></button>
+                <div class="market-status"><span class="status-dot"></span> Piyasalar açık <small>· Canlı veri</small></div>
+                <div class="topbar-actions">
+                    <span class="data-badge"><i></i> 1M Veri Seti</span>
+                    <span class="clock" id="liveClock"></span>
+                </div>
+            </header>
+            <main class="content-area">
+                @RenderBody()
+            </main>
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - DapperProject - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

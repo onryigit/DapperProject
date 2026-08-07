@@ -1,19 +1,24 @@
-﻿using System.Data;
 using Microsoft.Data.SqlClient;
 
+namespace DapperProject.Context;
 
-namespace DapperProject.Context
+public sealed class DapperContext
 {
-    public class DapperContext
-    {
-        private readonly IConfiguration _configuration;
-        private readonly string _connectionString;
+    private readonly string _connectionString;
 
-        public DapperContext(IConfiguration configuration)
-        {
-            _configuration = configuration;
-            _connectionString = _configuration.GetConnectionString("connectionkey");
-        }
-        public IDbConnection CreateConnection() => new SqlConnection(_connectionString);
+    public DapperContext(IConfiguration configuration)
+    {
+        _connectionString = configuration.GetConnectionString("TradePulse")
+            ?? throw new InvalidOperationException("TradePulse bağlantı dizesi bulunamadı.");
     }
+
+    public SqlConnection CreateConnection() => new(_connectionString);
+
+    public SqlConnection CreateMasterConnection()
+    {
+        var builder = new SqlConnectionStringBuilder(_connectionString) { InitialCatalog = "master" };
+        return new SqlConnection(builder.ConnectionString);
+    }
+
+    public string DatabaseName => new SqlConnectionStringBuilder(_connectionString).InitialCatalog;
 }
