@@ -33,10 +33,10 @@ public sealed class TradesController(ITradeRepository repository) : Controller
             return RedirectToAction(nameof(Index), new { page = returnPage, pageSize });
         }
 
-        TempData[await repository.UpdateAsync(trade, cancellationToken) ? "Success" : "Error"] =
-            await repository.GetByIdAsync(trade.Id, cancellationToken) is null
-                ? "İşlem bulunamadı."
-                : $"#{trade.Id} numaralı işlem güncellendi.";
+        var updated = await repository.UpdateAsync(trade, cancellationToken);
+        TempData[updated ? "Success" : "Error"] = updated
+            ? $"#{trade.Id} numaralı işlem güncellendi."
+            : "İşlem bulunamadı.";
         return RedirectToAction(nameof(Index), new { page = returnPage, pageSize });
     }
 

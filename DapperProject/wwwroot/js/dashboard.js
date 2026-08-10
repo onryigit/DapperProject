@@ -33,11 +33,12 @@
 
     if (typeof L !== 'undefined') {
         const map = L.map('tradeMap', { zoomControl: false, attributionControl: false, scrollWheelZoom: false }).setView([28, 18], 1.45);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 6 }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 6 }).addTo(map);
         const max = Math.max(...data.countries.map(x => x.count), 1);
         data.countries.filter(x => x.lat || x.lng).forEach(x => {
-            const radius = 7 + (x.count / max) * 17;
-            L.circleMarker([x.lat, x.lng], { radius, color: green, weight: 1, fillColor: green, fillOpacity: .23 })
+            const radius = 6 + Math.sqrt(x.count / max) * 13;
+            L.circleMarker([x.lat, x.lng], { radius: radius + 7, stroke: false, fillColor: '#168cff', fillOpacity: .14, interactive: false }).addTo(map);
+            L.circleMarker([x.lat, x.lng], { radius, color: '#bce8ff', weight: 1.5, fillColor: '#087fdb', fillOpacity: .58 })
                 .bindTooltip(`<strong>${x.country}</strong><br>${x.count.toLocaleString('tr-TR')} işlem<br>$${Math.round(x.volume).toLocaleString('tr-TR')}`, { direction: 'top' }).addTo(map);
         });
     }

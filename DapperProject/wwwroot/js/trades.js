@@ -4,6 +4,7 @@
     const detailBody = document.getElementById('tradeDetailBody');
     const formatMoney = value => Number(value).toLocaleString('tr-TR', { style: 'currency', currency: 'USD' });
     const formatDate = value => new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'medium' }).format(new Date(value));
+    const escapeHtml = value => String(value).replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
 
     async function showTrade(id) {
         if (!id || id < 1) return;
@@ -12,7 +13,8 @@
             const response = await fetch(`/Trades/${id}`, { headers: { Accept: 'application/json' } });
             const trade = await response.json();
             if (!response.ok) throw new Error(trade.message || 'İşlem bulunamadı.');
-            detailBody.innerHTML = `<div class="trade-detail-hero"><span class="pair-cell"><i>${trade.cryptoPair[0]}</i><strong>${trade.cryptoPair}</strong></span><span class="trade-badge ${trade.tradeType.toLowerCase()}">${trade.tradeType}</span><strong>${formatMoney(trade.totalUSD)}</strong></div><dl class="detail-grid"><div><dt>İşlem ID</dt><dd>#${trade.id}</dd></div><div><dt>Kullanıcı</dt><dd>${trade.userCode}</dd></div><div><dt>Fiyat</dt><dd>${formatMoney(trade.price)}</dd></div><div><dt>Miktar</dt><dd>${trade.quantity.toLocaleString('tr-TR')}</dd></div><div><dt>Komisyon</dt><dd>${formatMoney(trade.feeUSD)}</dd></div><div><dt>Konum</dt><dd>${trade.locationCountry}</dd></div><div><dt>İşlem Hızı</dt><dd>${trade.executionTimeMs} ms</dd></div><div><dt>Tarih</dt><dd>${formatDate(trade.transactionDate)}</dd></div></dl>`;
+            const pair = escapeHtml(trade.cryptoPair), type = escapeHtml(trade.tradeType);
+            detailBody.innerHTML = `<div class="trade-detail-hero"><span class="pair-cell"><i>${pair[0]}</i><strong>${pair}</strong></span><span class="trade-badge ${type.toLowerCase()}">${type}</span><strong>${formatMoney(trade.totalUSD)}</strong></div><dl class="detail-grid"><div><dt>İşlem ID</dt><dd>#${trade.id}</dd></div><div><dt>Kullanıcı</dt><dd>${escapeHtml(trade.userCode)}</dd></div><div><dt>Fiyat</dt><dd>${formatMoney(trade.price)}</dd></div><div><dt>Miktar</dt><dd>${trade.quantity.toLocaleString('tr-TR')}</dd></div><div><dt>Komisyon</dt><dd>${formatMoney(trade.feeUSD)}</dd></div><div><dt>Konum</dt><dd>${escapeHtml(trade.locationCountry)}</dd></div><div><dt>İşlem Hızı</dt><dd>${trade.executionTimeMs} ms</dd></div><div><dt>Tarih</dt><dd>${formatDate(trade.transactionDate)}</dd></div></dl>`;
         } catch (error) { detailBody.innerHTML = `<div class="empty-state"><strong>Kayıt bulunamadı</strong><span>${error.message}</span></div>`; }
     }
 
