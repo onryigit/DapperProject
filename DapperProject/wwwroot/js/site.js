@@ -6,6 +6,10 @@
     toggle?.addEventListener('click', () => { sidebar?.classList.toggle('open'); backdrop?.classList.toggle('show'); });
     backdrop?.addEventListener('click', closeSidebar);
 
+    document.querySelector('.brand')?.addEventListener('click', event => {
+        if (location.pathname.replace(/\/$/, '').toLowerCase() === '/dashboard') event.preventDefault();
+    });
+
     const clock = document.getElementById('liveClock');
     const tick = () => { if (clock) clock.textContent = new Intl.DateTimeFormat('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date()); };
     tick(); setInterval(tick, 1000);

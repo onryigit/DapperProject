@@ -1,18 +1,344 @@
 # TradePulse
 
-Kripto ve borsa işlemleri için ASP.NET Core MVC, Dapper ve SQL Server tabanlı 1 milyon kayıtlık Big Data analiz paneli.
+TradePulse; kripto para işlem verilerini analiz etmek ve yönetmek için geliştirilmiş, **ASP.NET Core MVC**, **Dapper** ve **SQL Server** tabanlı bir Big Data dashboard uygulamasıdır. Proje, varsayılan kurulumda üretilen **1.000.000 anlamlı işlem kaydı** üzerinde istatistik üretme, görselleştirme, sunucu taraflı sayfalama ve CRUD operasyonlarını yüksek performansla gerçekleştirme yaklaşımını gösterir.
 
-## Çalıştırma
+## Öne Çıkan Özellikler
 
-1. SQL Server varsayılan yerel örneğinin çalıştığından emin olun.
-2. Gerekirse `DapperProject/appsettings.json` içindeki `TradePulse` bağlantı dizesini kendi sunucunuza göre değiştirin.
-3. Proje kökünde `dotnet run --project DapperProject/TradePulse.csproj` komutunu çalıştırın.
+- Toplam işlem hacmi, komisyon, en yüksek hacimli parite ve ortalama işlem süresi istatistikleri
+- Veri setinin son 30 gününe ait hacim trendi ve önceki dönem karşılaştırmaları
+- Parite ve alış/satış dağılımlarını gösteren interaktif ApexCharts grafikleri
+- Ülke bazlı işlem yoğunluklarını gösteren Leaflet dünya haritası
+- En yüksek hacimli işlemler için hızlı özet tablosu
+- 1 milyon kayıt üzerinde SQL Server tarafında çalışan sayfalama
+- Birincil anahtar üzerinden ID bazlı hızlı kayıt sorgulama
+- Doğrulamalı güncelleme ve onay ekranına sahip silme işlemleri
+- Dapper parametreleri ve anti-forgery token ile güvenli veri işlemleri
+- İlk çalıştırmada otomatik veritabanı, şema, indeks ve veri seti oluşturma
+- Masaüstü, tablet ve mobil ekranlara uyumlu responsive arayüz
 
-İlk çalıştırmada uygulama `TradePulseDb` veritabanını ve şemayı oluşturur; deterministik ve tutarlı tam 1.000.000 `TradeLog` kaydını 50.000'lik partilerle `SqlBulkCopy` üzerinden yükler ve performans indekslerini kurar. `SeedHistory` kaydı sayesinde CRUD işlemlerinden sonra uygulama yeniden başladığında veri seti tekrar oluşturulmaz.
+## Kullanılan Teknolojiler
 
-## Rotalar
+| Katman | Teknoloji |
+|---|---|
+| Backend | .NET 10, ASP.NET Core MVC, C# |
+| Veri erişimi | Dapper 2.1, Microsoft.Data.SqlClient |
+| Veritabanı | Microsoft SQL Server |
+| Büyük veri yükleme | SqlBulkCopy |
+| Arayüz | Razor Views, Bootstrap, özel CSS |
+| Grafikler | ApexCharts |
+| Harita | Leaflet, Carto basemap |
+| İstemci tarafı | Vanilla JavaScript |
 
-- `/Dashboard`: İstatistikler, ApexCharts grafikleri, basınç/kapasite göstergeleri, Top 5 işlemler ve Leaflet dünya haritası.
-- `/Trades`: Dapper `OFFSET/FETCH` ile 20/50 kayıtlık server-side paging, ID sorgusu, modal güncelleme ve onaylı silme.
+## Proje Mimarisi ve Veri Akışı
 
-Dashboard toplu verileri tek bağlantı ve tek `QueryMultiple()` çağrısında alınır. Veri erişiminde Entity Framework kullanılmaz; yalnızca Dapper ve seeding için `SqlBulkCopy` vardır. Bağımsız SQL şeması `DapperProject/Database/Scripts/TradePulse.sql` dosyasındadır.
+Uygulama; sunum, uygulama/veri erişimi ve veritabanı sorumluluklarını birbirinden ayıran katmanlı bir yapı kullanır. Controller sınıfları HTTP akışını yönetirken bütün SQL işlemleri repository üzerinden gerçekleştirilir.
+
+```mermaid
+flowchart LR
+    subgraph Client["İstemci Katmanı"]
+        Browser["Web Tarayıcısı"]
+        DashboardPage["Dashboard Arayüzü"]
+        TradesPage["İşlem Verileri Arayüzü"]
+        Charts["ApexCharts"]
+        Map["Leaflet Haritası"]
+    end
+
+    subgraph Presentation["ASP.NET Core MVC Sunum Katmanı"]
+        Routing["Routing ve Middleware"]
+        DashboardController["DashboardController"]
+        TradesController["TradesController"]
+        RazorViews["Razor Views"]
+        Validation["Model Validation ve Anti-forgery"]
+    end
+
+    subgraph Application["Uygulama ve Veri Erişim Katmanı"]
+        Program["Program ve Dependency Injection"]
+        DatabaseSeeder["DatabaseSeeder"]
+        RepositoryContract["ITradeRepository"]
+        TradeRepository["TradeRepository"]
+        DapperContext["DapperContext"]
+        DashboardModels["DashboardViewModel"]
+        TradeModels["TradeLog ve PagedResult"]
+    end
+
+    subgraph Database["SQL Server Katmanı"]
+        SqlConnection["Microsoft.Data.SqlClient"]
+        TradeLogs[("TradeLogs - 1M Kayıt")]
+        SeedHistory[("SeedHistory")]
+        Indexes["Performans İndeksleri"]
+    end
+
+    Browser --> Routing
+    Program --> Routing
+    Program --> DatabaseSeeder
+    Routing -->|"GET /Dashboard"| DashboardController
+    Routing -->|"GET ve POST /Trades"| TradesController
+
+    DashboardController --> RepositoryContract
+    TradesController --> Validation
+    Validation --> RepositoryContract
+    RepositoryContract --> TradeRepository
+    TradeRepository --> DapperContext
+    DapperContext --> SqlConnection
+    SqlConnection --> TradeLogs
+    TradeLogs --- Indexes
+    DatabaseSeeder --> DapperContext
+    DatabaseSeeder -->|"SqlBulkCopy"| TradeLogs
+    DatabaseSeeder -->|"Seed kontrolü"| SeedHistory
+
+    TradeRepository -->|"QueryMultiple ile toplu sonuçlar"| DashboardModels
+    TradeRepository -->|"Paging ve CRUD sonuçları"| TradeModels
+    DashboardModels --> DashboardController
+    TradeModels --> TradesController
+    DashboardController --> RazorViews
+    TradesController --> RazorViews
+    RazorViews --> DashboardPage
+    RazorViews --> TradesPage
+    DashboardPage --> Charts
+    DashboardPage --> Map
+    DashboardPage --> Browser
+    TradesPage --> Browser
+
+```
+
+### Uygulama Başlangıcı ve Veri Üretimi
+
+İlk başlangıçta `DatabaseSeeder`, veritabanını ve tabloları otomatik olarak hazırlar. Kayıtlar bellekte 50.000 satırlık partiler halinde oluşturulur ve `SqlBulkCopy` ile SQL Server'a aktarılır. Seed tamamlandıktan sonra sorgu performansı için gerekli indeksler oluşturulur.
+
+```mermaid
+flowchart TD
+    Start["Uygulama Başlatılır"] --> ReadConfig["Bağlantı ve seed ayarları okunur"]
+    ReadConfig --> ConnectMaster["SQL Server master veritabanına bağlanılır"]
+    ConnectMaster --> DatabaseCheck{"TradePulseDb mevcut mu?"}
+    DatabaseCheck -->|"Hayır"| CreateDatabase["TradePulseDb oluşturulur"]
+    DatabaseCheck -->|"Evet"| OpenDatabase["Uygulama veritabanına bağlanılır"]
+    CreateDatabase --> OpenDatabase
+    OpenDatabase --> EnsureSchema["TradeLogs ve SeedHistory şeması doğrulanır"]
+    EnsureSchema --> SeedCheck{"SeedHistory kaydı mevcut mu?"}
+    SeedCheck -->|"Evet"| EnsureIndexes["Performans indeksleri doğrulanır"]
+    SeedCheck -->|"Hayır"| PrepareBatch["Tutarlı sentetik işlem kayıtları üretilir"]
+    PrepareBatch --> BulkCopy["50.000 satırlık SqlBulkCopy işlemi"]
+    BulkCopy --> MoreRows{"1.000.000 kayıt tamamlandı mı?"}
+    MoreRows -->|"Hayır"| PrepareBatch
+    MoreRows -->|"Evet"| SaveHistory["SeedHistory kaydı eklenir"]
+    SaveHistory --> EnsureIndexes
+    EnsureIndexes --> RunApp["MVC uygulaması istek kabul etmeye başlar"]
+```
+
+### Dashboard İstek Akışı
+
+Dashboard için gerekli özet, trend, dağılım, Top 5 işlem ve ülke verileri tek bağlantıda, tek bir Dapper `QueryMultiple()` çağrısıyla alınır.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Kullanıcı
+    participant UI as Dashboard View
+    participant Controller as DashboardController
+    participant Repository as TradeRepository
+    participant DB as SQL Server
+    participant JS as ApexCharts ve Leaflet
+
+    User->>Controller: GET /Dashboard
+    Controller->>Repository: GetDashboardAsync()
+    Repository->>DB: QueryMultiple ile 6 sonuç seti
+    DB-->>Repository: Özet, trend, dağılımlar, Top 5 ve ülkeler
+    Repository->>Repository: Yüzdeleri ve harita koordinatlarını hesapla
+    Repository-->>Controller: DashboardViewModel
+    Controller-->>UI: Razor View oluştur
+    UI-->>User: HTML dashboard
+    UI->>JS: Grafik ve harita verilerini aktar
+    JS-->>User: İnteraktif grafikler ve yoğunluk haritası
+```
+
+### Veri Yönetimi Akışı
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Kullanıcı
+    participant UI as Trades View
+    participant Controller as TradesController
+    participant Repository as TradeRepository
+    participant DB as SQL Server
+
+    User->>Controller: GET /Trades?page=1&pageSize=20
+    Controller->>Controller: Sayfa parametrelerini doğrula
+    Controller->>Repository: GetPagedAsync()
+    Repository->>DB: COUNT ve OFFSET/FETCH sorgusu
+    DB-->>Repository: Toplam sayı ve sayfa kayıtları
+    Repository-->>UI: PagedResult
+    UI-->>User: Sayfalanmış veri tablosu
+
+    User->>Controller: GET /Trades/{id}
+    Controller->>Repository: GetByIdAsync(id)
+    Repository->>DB: Primary key sorgusu
+    DB-->>Repository: İşlem kaydı
+    Repository-->>Controller: TradeLog
+    Controller-->>User: JSON işlem detayı
+
+    User->>Controller: POST /Trades/Update
+    Controller->>Controller: Anti-forgery ve model doğrulama
+    Controller->>Repository: UpdateAsync(trade)
+    Repository->>Repository: Toplam ve komisyonu yeniden hesapla
+    Repository->>DB: Parametreli UPDATE
+    DB-->>Repository: Etkilenen satır sayısı
+    Repository-->>Controller: Güncelleme sonucu
+    Controller-->>User: Başarı veya hata bildirimi
+
+    User->>Controller: POST /Trades/Delete/{id}
+    Controller->>Controller: Anti-forgery doğrulaması
+    Controller->>Repository: DeleteAsync(id)
+    Repository->>DB: Parametreli DELETE
+    DB-->>Repository: Etkilenen satır sayısı
+    Repository-->>Controller: Silme sonucu
+    Controller-->>User: Başarı veya hata bildirimi
+```
+
+## Veri Seti
+
+Veri seti, 85.000 kullanıcı kodundan seçilen kripto para alım ve satım işlemlerini temsil eder.
+
+| Alan | Açıklama |
+|---|---|
+| `Id` | Benzersiz işlem kimliği |
+| `UserCode` | `USR-000001` formatında kullanıcı kodu |
+| `CryptoPair` | BTC, ETH, BNB, SOL, XRP, ADA, AVAX veya DOGE / USDT paritesi |
+| `TradeType` | BUY veya SELL işlem yönü |
+| `Price` | İşlem anındaki birim fiyat |
+| `Quantity` | Alınan veya satılan varlık miktarı |
+| `TotalUSD` | Fiyat ve miktardan hesaplanan işlem toplamı |
+| `FeeUSD` | İşlem toplamından hesaplanan komisyon |
+| `LocationCountry` | İşlemin gerçekleştiği ülke |
+| `ExecutionTimeMs` | Milisaniye cinsinden işlem süresi |
+| `TransactionDate` | UTC işlem tarihi |
+
+Veriler sabit bir random seed ile anlamlı fiyat aralıklarında üretilir. `TotalUSD` ve `FeeUSD` alanları diğer finansal alanlardan hesaplandığı için kayıtlar kendi içinde tutarlıdır.
+
+## Performans Yaklaşımı
+
+- **Toplu yükleme:** 1 milyon kayıt, tek tek `INSERT` yerine `SqlBulkCopy` ile yüklenir.
+- **Partili üretim:** Bellek kullanımını kontrol altında tutmak için 50.000 satırlık partiler kullanılır.
+- **Sunucu taraflı paging:** Uygulama yalnızca ekranda gösterilecek 20 veya 50 kaydı SQL Server'dan alır.
+- **Tek bağlantıda dashboard:** Bağımsız dashboard sorguları `QueryMultiple()` ile tek round-trip içinde çalıştırılır.
+- **Parametreli sorgular:** Bütün filtre ve CRUD değerleri Dapper parametreleriyle SQL Server'a gönderilir.
+- **İndeksler:** Tarih, parite, işlem türü, toplam tutar ve ülke sorguları için covering index yapıları bulunur.
+- **Asenkron I/O:** Veritabanı operasyonları async olarak çalışır ve `CancellationToken` destekler.
+
+## Proje Yapısı
+
+```text
+DapperProject/
+├── Context/
+│   └── DapperContext.cs          # SQL bağlantılarının oluşturulması
+├── Controllers/
+│   ├── DashboardController.cs    # Dashboard HTTP akışı
+│   ├── TradesController.cs       # Paging, ID sorgusu ve CRUD akışı
+│   └── HomeController.cs         # Ana yönlendirme ve hata sayfası
+├── Data/
+│   └── DatabaseSeeder.cs         # Şema ve 1 milyon kayıt üretimi
+├── Database/Scripts/
+│   └── TradePulse.sql            # Bağımsız, idempotent SQL şeması
+├── Models/
+│   ├── DashboardViewModel.cs     # Dashboard sonuç modelleri
+│   ├── PagedResult.cs            # Sayfalama modeli
+│   └── TradeLog.cs               # İşlem ve doğrulama modeli
+├── Services/
+│   ├── ITradeRepository.cs       # Veri erişim sözleşmesi
+│   └── TradeRepository.cs        # Dapper sorguları ve CRUD işlemleri
+├── Views/
+│   ├── Dashboard/                # Dashboard Razor görünümü
+│   ├── Trades/                   # Veri tablosu ve düzenleme arayüzü
+│   └── Shared/                   # Ortak layout ve hata görünümü
+├── wwwroot/
+│   ├── css/                      # Responsive uygulama tasarımı
+│   └── js/                       # Dashboard, tablo ve ortak etkileşimler
+├── appsettings.json              # Bağlantı ve seed ayarları
+└── Program.cs                    # DI, middleware ve başlangıç akışı
+```
+
+## Kurulum ve Çalıştırma
+
+### Gereksinimler
+
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
+- Microsoft SQL Server
+- Veritabanı oluşturma yetkisine sahip bir SQL Server kullanıcısı
+- Harita, font ve grafik CDN kaynakları için internet bağlantısı
+
+### 1. Bağlantı dizesini yapılandırın
+
+`DapperProject/appsettings.json` içindeki bağlantı dizesini SQL Server ortamınıza göre düzenleyin:
+
+```json
+{
+  "ConnectionStrings": {
+    "TradePulse": "Server=.;Database=TradePulseDb;Integrated Security=true;Encrypt=False;TrustServerCertificate=true;MultipleActiveResultSets=true"
+  }
+}
+```
+
+### 2. Bağımlılıkları yükleyin
+
+```bash
+dotnet restore
+```
+
+### 3. Uygulamayı çalıştırın
+
+```bash
+dotnet run --project DapperProject/TradePulse.csproj
+```
+
+İlk çalıştırmada veritabanı hazırlanırken 1 milyon kayıt yüklendiği için başlangıç normalden uzun sürebilir. Terminalde seed ilerlemesi gösterilir. Sonraki başlangıçlarda `SeedHistory` kontrolü sayesinde aynı veri seti yeniden oluşturulmaz.
+
+Uygulama varsayılan geliştirme profiliyle aşağıdaki adreslerden açılır:
+
+- `https://localhost:7187/Dashboard`
+- `https://localhost:7187/Trades`
+
+## Yapılandırma
+
+Seed davranışı `appsettings.json` üzerinden değiştirilebilir:
+
+```json
+{
+  "TradePulse": {
+    "SeedRecordCount": 1000000,
+    "BulkBatchSize": 50000
+  }
+}
+```
+
+| Ayar | Varsayılan | Açıklama |
+|---|---:|---|
+| `SeedRecordCount` | 1.000.000 | İlk kurulumda üretilecek kayıt sayısı |
+| `BulkBatchSize` | 50.000 | Her `SqlBulkCopy` işlemindeki satır sayısı |
+
+## Uygulama Rotaları
+
+| Metot | Rota | Açıklama |
+|---|---|---|
+| GET | `/` | Dashboard sayfasına yönlendirir |
+| GET | `/Dashboard` | Analiz dashboard'unu getirir |
+| GET | `/Trades` | Sayfalanmış işlem tablosunu getirir |
+| GET | `/Trades/{id}` | ID'ye göre işlem detayını JSON olarak getirir |
+| POST | `/Trades/Update` | Bir işlem kaydını doğrulayıp günceller |
+| POST | `/Trades/Delete/{id}` | Bir işlem kaydını siler |
+
+## Teknik Kazanımlar
+
+Bu proje aşağıdaki konularda uygulamalı örnek sunar:
+
+- Dapper ile repository pattern kullanımı
+- Büyük veri setlerinin verimli biçimde oluşturulması ve yüklenmesi
+- SQL Server sorgu ve indeks tasarımı
+- Server-side paging ve birincil anahtar sorguları
+- Birden fazla sonuç setinin tek sorguda işlenmesi
+- ASP.NET Core MVC model binding ve validation
+- Razor ile backend verisinin JavaScript grafiklerine aktarılması
+- Responsive dashboard ve veri yönetimi arayüzü geliştirme
+
+---
+
+TradePulse, eğitim ve portföy amacıyla geliştirilmiş bir veri analizi uygulamasıdır.

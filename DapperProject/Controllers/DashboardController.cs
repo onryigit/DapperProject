@@ -8,5 +8,14 @@ public sealed class DashboardController(ITradeRepository repository) : Controlle
 {
     [HttpGet("")]
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
-        => View(await repository.GetDashboardAsync(cancellationToken));
+    {
+        try
+        {
+            return View(await repository.GetDashboardAsync(cancellationToken));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return new EmptyResult();
+        }
+    }
 }
