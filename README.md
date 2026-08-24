@@ -1,4 +1,4 @@
-# TradePulse
+# 📈 TradePulse
 
 TradePulse; kripto para işlem verilerini analiz etmek ve yönetmek için geliştirilmiş, **ASP.NET Core MVC**, **Dapper** ve **SQL Server** tabanlı bir Big Data dashboard uygulamasıdır. Proje, varsayılan kurulumda üretilen **1.000.000 anlamlı işlem kaydı** üzerinde istatistik üretme, görselleştirme, sunucu taraflı sayfalama ve CRUD operasyonlarını yüksek performansla gerçekleştirme yaklaşımını gösterir.
 
