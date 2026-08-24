@@ -33,6 +33,63 @@ TradePulse; kripto para işlem verilerini analiz etmek ve yönetmek için geliş
 
 Uygulama; sunum, uygulama/veri erişimi ve veritabanı sorumluluklarını birbirinden ayıran katmanlı bir yapı kullanır. Controller sınıfları HTTP akışını yönetirken bütün SQL işlemleri repository üzerinden gerçekleştirilir.
 
+```mermaid
+flowchart LR
+    subgraph Client["İstemci Katmanı"]
+        Browser["Web Tarayıcısı"]
+        Dashboard["Dashboard"]
+        Trades["Veri Tablosu"]
+        Visuals["ApexCharts ve Leaflet"]
+    end
+
+    subgraph Presentation["ASP.NET Core MVC"]
+        Routing["Routing ve Middleware"]
+        DashboardController["DashboardController"]
+        TradesController["TradesController"]
+        Validation["Model Validation ve Anti-forgery"]
+        Views["Razor Views"]
+    end
+
+    subgraph DataAccess["Veri Erişim Katmanı"]
+        Contract["ITradeRepository"]
+        Repository["TradeRepository"]
+        Context["DapperContext"]
+        Seeder["DatabaseSeeder"]
+    end
+
+    subgraph SqlServer["SQL Server"]
+        Connection["Microsoft.Data.SqlClient"]
+        TradeLogs[("TradeLogs - 1M Kayıt")]
+        SeedHistory[("SeedHistory")]
+        Indexes["Performans İndeksleri"]
+    end
+
+    Browser -->|"HTTP isteği"| Routing
+    Routing -->|"GET /Dashboard"| DashboardController
+    Routing -->|"GET ve POST /Trades"| TradesController
+    TradesController --> Validation
+    DashboardController --> Contract
+    Validation --> Contract
+    Contract --> Repository
+    Repository --> Context
+    Context --> Connection
+    Connection -->|"Parametreli Dapper sorguları"| TradeLogs
+    TradeLogs --- Indexes
+
+    Repository -->|"QueryMultiple sonuçları"| DashboardController
+    Repository -->|"Paging, ID ve CRUD sonuçları"| TradesController
+    DashboardController --> Views
+    TradesController --> Views
+    Views --> Dashboard
+    Views --> Trades
+    Dashboard --> Visuals
+    Dashboard --> Browser
+    Trades --> Browser
+
+    Seeder -->|"İlk çalıştırma kontrolü"| SeedHistory
+    Seeder -->|"50.000 satırlık SqlBulkCopy partileri"| TradeLogs
+```
+
 ## Veri Seti
 
 Veri seti, 85.000 kullanıcı kodundan seçilen kripto para alım ve satım işlemlerini temsil eder.
@@ -93,3 +150,27 @@ DapperProject/
 │   └── js/                       # Dashboard, tablo ve ortak etkileşimler
 ├── appsettings.json              # Bağlantı ve seed ayarları
 └── Program.cs                    # DI, middleware ve başlangıç akışı
+```
+
+## Uygulama Rotaları
+
+| Metot | Rota | Açıklama |
+|---|---|---|
+| GET | `/` | Dashboard sayfasına yönlendirir |
+| GET | `/Dashboard` | İstatistikleri, grafikleri, haritayı ve özet tabloyu getirir |
+| GET | `/Trades` | Sunucu tarafında sayfalanmış işlem tablosunu getirir |
+| GET | `/Trades/{id}` | ID'ye göre işlem detayını JSON olarak getirir |
+| POST | `/Trades/Update` | İşlem kaydını doğrular ve günceller |
+| POST | `/Trades/Delete/{id}` | Onaylanan işlem kaydını siler |
+
+## Teknik Kazanımlar
+
+- Dapper ve repository pattern ile sürdürülebilir veri erişim katmanı oluşturma
+- `SqlBulkCopy` kullanarak büyük veri setlerini performanslı biçimde yükleme
+- SQL Server için sorgu, covering index ve server-side paging tasarlama
+- `QueryMultiple()` ile birden fazla dashboard sonucunu tek round-trip içinde işleme
+- Parametreli sorgularla ID sorgulama, güncelleme ve silme operasyonları geliştirme
+- ASP.NET Core MVC model binding, validation ve anti-forgery mekanizmalarını uygulama
+- Razor üzerinden backend verisini JavaScript grafiklerine ve harita bileşenlerine aktarma
+- Asenkron veritabanı işlemleri ve istek iptali yönetimi
+- Responsive ve veri odaklı bir dashboard arayüzü geliştirme
