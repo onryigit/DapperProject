@@ -174,3 +174,16 @@ DapperProject/
 - Razor üzerinden backend verisini JavaScript grafiklerine ve harita bileşenlerine aktarma
 - Asenkron veritabanı işlemleri ve istek iptali yönetimi
 - Responsive ve veri odaklı bir dashboard arayüzü geliştirme
+
+
+<img width="1895" height="945" alt="a111111" src="https://github.com/user-attachments/assets/761f97f1-2a8c-4efd-9886-a6d355e21ae5" />
+<img width="1901" height="951" alt="a6" src="https://github.com/user-attachments/assets/05957fab-969d-4269-9696-627a2dd37742" />
+<img width="1901" height="946" alt="a5" src="https://github.com/user-attachments/assets/75e41391-c9b8-4645-a433-e3871e9f160a" />
+<img width="1900" height="940" alt="a4" src="https://github.com/user-attachments/assets/ee7e0cee-9449-40b4-99ef-edd4a3c39206" />
+<img width="1903" height="950" alt="a3" src="https://github.com/user-attachments/assets/b3c8011b-d1ed-4f31-aae0-c92097d35acf" />
+<img width="1902" height="946" alt="a2" src="https://github.com/user-attachments/assets/08a87d54-9c88-4398-8734-44ea667074ec" />
+<img width="1904" height="944" alt="a1" src="https://github.com/user-attachments/assets/7bea1dc9-db0b-495f-8f33-08c643e1fd5d" />
+<img width="1903" height="944" alt="a00" src="https://github.com/user-attachments/assets/fa25d37f-766d-4ddd-abb8-5a4bb698424c" />
+<img width="1903" height="952" alt="a0" src="https://github.com/user-attachments/assets/dd9761d1-813c-4fce-8b34-6206c6188b9c" />
+
+
