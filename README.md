@@ -33,76 +33,6 @@ TradePulse; kripto para işlem verilerini analiz etmek ve yönetmek için geliş
 
 Uygulama; sunum, uygulama/veri erişimi ve veritabanı sorumluluklarını birbirinden ayıran katmanlı bir yapı kullanır. Controller sınıfları HTTP akışını yönetirken bütün SQL işlemleri repository üzerinden gerçekleştirilir.
 
-```mermaid
-flowchart LR
-    subgraph Client["İstemci Katmanı"]
-        Browser["Web Tarayıcısı"]
-        DashboardPage["Dashboard Arayüzü"]
-        TradesPage["İşlem Verileri Arayüzü"]
-        Charts["ApexCharts"]
-        Map["Leaflet Haritası"]
-    end
-
-    subgraph Presentation["ASP.NET Core MVC Sunum Katmanı"]
-        Routing["Routing ve Middleware"]
-        DashboardController["DashboardController"]
-        TradesController["TradesController"]
-        RazorViews["Razor Views"]
-        Validation["Model Validation ve Anti-forgery"]
-    end
-
-    subgraph Application["Uygulama ve Veri Erişim Katmanı"]
-        Program["Program ve Dependency Injection"]
-        DatabaseSeeder["DatabaseSeeder"]
-        RepositoryContract["ITradeRepository"]
-        TradeRepository["TradeRepository"]
-        DapperContext["DapperContext"]
-        DashboardModels["DashboardViewModel"]
-        TradeModels["TradeLog ve PagedResult"]
-    end
-
-    subgraph Database["SQL Server Katmanı"]
-        SqlConnection["Microsoft.Data.SqlClient"]
-        TradeLogs[("TradeLogs - 1M Kayıt")]
-        SeedHistory[("SeedHistory")]
-        Indexes["Performans İndeksleri"]
-    end
-
-    Browser --> Routing
-    Program --> Routing
-    Program --> DatabaseSeeder
-    Routing -->|"GET /Dashboard"| DashboardController
-    Routing -->|"GET ve POST /Trades"| TradesController
-
-    DashboardController --> RepositoryContract
-    TradesController --> Validation
-    Validation --> RepositoryContract
-    RepositoryContract --> TradeRepository
-    TradeRepository --> DapperContext
-    DapperContext --> SqlConnection
-    SqlConnection --> TradeLogs
-    TradeLogs --- Indexes
-    DatabaseSeeder --> DapperContext
-    DatabaseSeeder -->|"SqlBulkCopy"| TradeLogs
-    DatabaseSeeder -->|"Seed kontrolü"| SeedHistory
-
-    TradeRepository -->|"QueryMultiple ile toplu sonuçlar"| DashboardModels
-    TradeRepository -->|"Paging ve CRUD sonuçları"| TradeModels
-    DashboardModels --> DashboardController
-    TradeModels --> TradesController
-    DashboardController --> RazorViews
-    TradesController --> RazorViews
-    RazorViews --> DashboardPage
-    RazorViews --> TradesPage
-    DashboardPage --> Charts
-    DashboardPage --> Map
-    DashboardPage --> Browser
-    TradesPage --> Browser
-
-```
-
-```
-
 ## Veri Seti
 
 Veri seti, 85.000 kullanıcı kodundan seçilen kripto para alım ve satım işlemlerini temsil eder.
@@ -163,31 +93,3 @@ DapperProject/
 │   └── js/                       # Dashboard, tablo ve ortak etkileşimler
 ├── appsettings.json              # Bağlantı ve seed ayarları
 └── Program.cs                    # DI, middleware ve başlangıç akışı
-```
-
-## Uygulama Rotaları
-
-| Metot | Rota | Açıklama |
-|---|---|---|
-| GET | `/` | Dashboard sayfasına yönlendirir |
-| GET | `/Dashboard` | Analiz dashboard'unu getirir |
-| GET | `/Trades` | Sayfalanmış işlem tablosunu getirir |
-| GET | `/Trades/{id}` | ID'ye göre işlem detayını JSON olarak getirir |
-| POST | `/Trades/Update` | Bir işlem kaydını doğrulayıp günceller |
-| POST | `/Trades/Delete/{id}` | Bir işlem kaydını siler |
-
-## Teknik Kazanımlar
-
-Bu proje aşağıdaki konularda uygulamalı örnek sunar:
-
-- Dapper ile repository pattern kullanımı
-- Büyük veri setlerinin verimli biçimde oluşturulması ve yüklenmesi
-- SQL Server sorgu ve indeks tasarımı
-- Server-side paging ve birincil anahtar sorguları
-- Birden fazla sonuç setinin tek sorguda işlenmesi
-- ASP.NET Core MVC model binding ve validation
-- Razor ile backend verisinin JavaScript grafiklerine aktarılması
-- Responsive dashboard ve veri yönetimi arayüzü geliştirme
-
----
-
