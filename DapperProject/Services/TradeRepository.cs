@@ -11,17 +11,25 @@ public sealed class TradeRepository(DapperContext context) : ITradeRepository
     public async Task<DashboardViewModel> GetDashboardAsync(CancellationToken cancellationToken = default)
     {
         const string sql = """
+            DECLARE @AsOf DATETIME = (SELECT MAX(TransactionDate) FROM TradeLogs);
+
             SELECT
                 COALESCE(SUM(TotalUSD), 0) AS TotalVolume,
                 COALESCE(SUM(FeeUSD), 0) AS TotalFees,
                 COALESCE(AVG(CAST(ExecutionTimeMs AS DECIMAL(18,2))), 0) AS AverageExecutionTime,
                 COUNT(*) AS TotalTrades,
+                MAX(TransactionDate) AS LatestTransactionDate,
+                COALESCE(SUM(CASE WHEN TransactionDate > DATEADD(DAY, -30, @AsOf) AND TransactionDate <= @AsOf THEN TotalUSD ELSE 0 END), 0) AS CurrentPeriodVolume,
+                COALESCE(SUM(CASE WHEN TransactionDate > DATEADD(DAY, -60, @AsOf) AND TransactionDate <= DATEADD(DAY, -30, @AsOf) THEN TotalUSD ELSE 0 END), 0) AS PreviousPeriodVolume,
+                COALESCE(SUM(CASE WHEN TransactionDate > DATEADD(DAY, -30, @AsOf) AND TransactionDate <= @AsOf THEN FeeUSD ELSE 0 END), 0) AS CurrentPeriodFees,
+                COALESCE(SUM(CASE WHEN TransactionDate > DATEADD(DAY, -60, @AsOf) AND TransactionDate <= DATEADD(DAY, -30, @AsOf) THEN FeeUSD ELSE 0 END), 0) AS PreviousPeriodFees,
                 COALESCE((SELECT TOP (1) CryptoPair FROM TradeLogs GROUP BY CryptoPair ORDER BY SUM(TotalUSD) DESC), N'—') AS HighestVolumePair
             FROM TradeLogs;
 
             SELECT CAST(TransactionDate AS DATE) AS TradeDate, SUM(TotalUSD) AS Volume
             FROM TradeLogs
-            WHERE TransactionDate >= DATEADD(DAY, -29, CAST(GETUTCDATE() AS DATE))
+            WHERE TransactionDate >= DATEADD(DAY, -29, CAST(@AsOf AS DATE))
+              AND TransactionDate <= @AsOf
             GROUP BY CAST(TransactionDate AS DATE)
             ORDER BY TradeDate;
 
@@ -70,29 +78,35 @@ public sealed class TradeRepository(DapperContext context) : ITradeRepository
             TopTransactions = top,
             CountryActivity = countries,
             BuyPressure = totalTypeCount == 0 ? 0 : Math.Round(buyCount * 100m / totalTypeCount, 1),
-            ServerCapacityUsage = Math.Min(100m, Math.Round(summary.TotalTrades * 100m / 1_350_000m, 1))
+            VolumeChangePercentage = CalculatePercentageChange(summary.CurrentPeriodVolume, summary.PreviousPeriodVolume),
+            FeeChangePercentage = CalculatePercentageChange(summary.CurrentPeriodFees, summary.PreviousPeriodFees),
+            DatasetTargetUsage = Math.Min(100m, Math.Round(summary.TotalTrades * 100m / 1_000_000m, 1))
         };
     }
 
     public async Task<PagedResult<TradeLog>> GetPagedAsync(int page, int pageSize, int? id, CancellationToken cancellationToken = default)
     {
         const string sql = """
-            SELECT COUNT(1) FROM TradeLogs WHERE (@Id IS NULL OR Id = @Id);
+            DECLARE @TotalCount INT = (SELECT COUNT(1) FROM TradeLogs WHERE (@Id IS NULL OR Id = @Id));
+            DECLARE @TotalPages INT = CASE WHEN @TotalCount = 0 THEN 1 ELSE CEILING(@TotalCount * 1.0 / @PageSize) END;
+            DECLARE @EffectivePage INT = CASE WHEN @Page > @TotalPages THEN @TotalPages ELSE @Page END;
+
+            SELECT @TotalCount AS TotalCount, @EffectivePage AS Page;
             SELECT Id, UserCode, CryptoPair, TradeType, Price, Quantity, TotalUSD, FeeUSD, LocationCountry, ExecutionTimeMs, TransactionDate
             FROM TradeLogs
             WHERE (@Id IS NULL OR Id = @Id)
             ORDER BY TransactionDate DESC, Id DESC
-            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+            OFFSET ((@EffectivePage - 1) * @PageSize) ROWS FETCH NEXT @PageSize ROWS ONLY;
             """;
 
-        var parameters = new { Id = id, Offset = (page - 1) * pageSize, PageSize = pageSize };
+        var parameters = new { Id = id, Page = page, PageSize = pageSize };
         await using var connection = context.CreateConnection();
         using var multi = await connection.QueryMultipleAsync(
             new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
-        var total = await multi.ReadSingleAsync<int>();
+        var metadata = await multi.ReadSingleAsync<PageMetadata>();
         var items = (await multi.ReadAsync<TradeLog>()).AsList();
 
-        return new PagedResult<TradeLog> { Items = items, Page = page, PageSize = pageSize, TotalCount = total };
+        return new PagedResult<TradeLog> { Items = items, Page = metadata.Page, PageSize = pageSize, TotalCount = metadata.TotalCount };
     }
 
     public async Task<TradeLog?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
@@ -114,6 +128,8 @@ public sealed class TradeRepository(DapperContext context) : ITradeRepository
             WHERE Id = @Id;
             """;
         trade.TotalUSD = Math.Round(trade.Price * trade.Quantity, 4);
+        var feeRate = trade.Id % 20 == 0 ? 0.00075m : 0.001m;
+        trade.FeeUSD = Math.Round(trade.TotalUSD * feeRate, 4);
         await using var connection = context.CreateConnection();
         return await connection.ExecuteAsync(
             new CommandDefinition(sql, trade, cancellationToken: cancellationToken)) == 1;
@@ -138,5 +154,16 @@ public sealed class TradeRepository(DapperContext context) : ITradeRepository
         foreach (var country in countries)
             if (coordinates.TryGetValue(country.LocationCountry, out var point))
                 (country.Latitude, country.Longitude) = point;
+    }
+
+    private static decimal CalculatePercentageChange(decimal current, decimal previous)
+        => previous == 0
+            ? current == 0 ? 0 : 100
+            : Math.Round((current - previous) * 100m / previous, 1);
+
+    private sealed class PageMetadata
+    {
+        public int TotalCount { get; set; }
+        public int Page { get; set; }
     }
 }

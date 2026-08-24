@@ -6,11 +6,11 @@ public sealed class TradeLog
 {
     public int Id { get; set; }
 
-    [Required, StringLength(20)]
+    [Required, StringLength(20), RegularExpression(@"^USR-\d{6}$", ErrorMessage = "Kullanıcı kodu USR-000001 biçiminde olmalıdır.")]
     [Display(Name = "Kullanıcı Kodu")]
     public string UserCode { get; set; } = string.Empty;
 
-    [Required, StringLength(20)]
+    [Required, StringLength(20), RegularExpression(@"^(BTC|ETH|BNB|SOL|XRP|ADA|AVAX|DOGE)/USDT$", ErrorMessage = "Geçerli bir işlem paritesi seçin.")]
     [Display(Name = "Parite")]
     public string CryptoPair { get; set; } = string.Empty;
 
@@ -33,7 +33,7 @@ public sealed class TradeLog
     [Display(Name = "Komisyon USD")]
     public decimal FeeUSD { get; set; }
 
-    [Required, StringLength(60)]
+    [Required, StringLength(60), RegularExpression(@"^(Türkiye|ABD|Almanya|Birleşik Krallık|Japonya|Güney Kore|Singapur|Brezilya|Kanada|Fransa|Hindistan|BAE)$", ErrorMessage = "Geçerli bir ülke seçin.")]
     [Display(Name = "Ülke")]
     public string LocationCountry { get; set; } = string.Empty;
 

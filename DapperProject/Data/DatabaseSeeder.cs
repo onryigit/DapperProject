@@ -62,7 +62,9 @@ public sealed class DatabaseSeeder(
             (Name: "DOGE/USDT", Base: 0.14m, Spread: 0.07m, MaxQty: 250_000m)
         };
         var countries = new[] { "Türkiye", "ABD", "Almanya", "Birleşik Krallık", "Japonya", "Güney Kore", "Singapur", "Brezilya", "Kanada", "Fransa", "Hindistan", "BAE" };
-        var start = DateTime.UtcNow.Date.AddDays(-364);
+        var end = DateTime.UtcNow;
+        var start = end.Date.AddDays(-364);
+        var dateRangeSeconds = (long)(end - start).TotalSeconds;
 
         for (var offset = 0; offset < _recordCount; offset += _batchSize)
         {
@@ -78,7 +80,7 @@ public sealed class DatabaseSeeder(
                 var total = Math.Round(price * quantity, 4);
                 var tradeType = random.NextDouble() < 0.515 ? "BUY" : "SELL";
                 var feeRate = id % 20 == 0 ? 0.00075m : 0.001m;
-                var date = start.AddSeconds(random.Next(0, 365 * 24 * 60 * 60));
+                var date = start.AddSeconds(random.NextInt64(dateRangeSeconds + 1));
 
                 table.Rows.Add(id, $"USR-{random.Next(1, 85_001):D6}", pair.Name, tradeType, price, quantity,
                     total, Math.Round(total * feeRate, 4), countries[random.Next(countries.Length)], random.Next(8, 241), date);

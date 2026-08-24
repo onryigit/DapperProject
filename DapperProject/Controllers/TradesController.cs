@@ -27,6 +27,9 @@ public sealed class TradesController(ITradeRepository repository) : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(TradeLog trade, int returnPage = 1, int pageSize = 20, CancellationToken cancellationToken = default)
     {
+        if (trade.TransactionDate < new DateTime(2000, 1, 1) || trade.TransactionDate > DateTime.UtcNow.AddMinutes(5))
+            ModelState.AddModelError(nameof(trade.TransactionDate), "İşlem tarihi 2000 yılından önce veya gelecekte olamaz.");
+
         if (!ModelState.IsValid)
         {
             TempData["Error"] = "Kayıt güncellenemedi. Alanları kontrol edin.";

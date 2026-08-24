@@ -2,28 +2,30 @@
 @{
     ViewData["Title"] = "Dashboard";
     var sellPressure = 100 - Model.BuyPressure;
+    var volumeChange = Model.VolumeChangePercentage.ToString("+0.0;-0.0;0.0");
+    var feeChange = Model.FeeChangePercentage.ToString("+0.0;-0.0;0.0");
 }
 
 <section class="page-heading">
     <div>
         <span class="eyebrow">PİYASA GENEL BAKIŞI</span>
         <h1>Analiz Dashboard</h1>
-        <p>Bir milyon işlem kaydından üretilen canlı piyasa içgörüleri.</p>
+        <p>@Model.Summary.TotalTrades.ToString("N0") işlem kaydından üretilen güncel piyasa içgörüleri.</p>
     </div>
-    <div class="refresh-state"><span></span> Son güncelleme: <strong>Şimdi</strong></div>
+    <div class="refresh-state"><span></span> Son veri: <strong>@(Model.Summary.LatestTransactionDate?.ToString("dd MMM yyyy HH:mm") ?? "—") UTC</strong></div>
 </section>
 
 <section class="stat-grid">
     <article class="stat-card accent-green">
         <div class="stat-icon">↗</div><span>TOPLAM İŞLEM HACMİ</span>
         <strong>$@Model.Summary.TotalVolume.ToString("N0")</strong>
-        <small><b>+12.8%</b> son 30 güne göre</small>
+        <small><b>@volumeChange%</b> önceki 30 güne göre</small>
         <i class="sparkline up"></i>
     </article>
     <article class="stat-card accent-cyan">
         <div class="stat-icon">◇</div><span>TOPLAM KOMİSYON</span>
         <strong>$@Model.Summary.TotalFees.ToString("N0")</strong>
-        <small><b>+8.4%</b> protokol geliri</small>
+        <small><b>@feeChange%</b> önceki 30 güne göre</small>
         <i class="sparkline soft"></i>
     </article>
     <article class="stat-card accent-gold">
@@ -46,7 +48,7 @@
         <div id="volumeChart" class="chart-box"></div>
     </article>
     <article class="panel distribution-panel">
-        <div class="panel-head"><div><span class="eyebrow">DAĞILIM</span><h2>Parite Payları</h2></div><span class="live-tag">CANLI</span></div>
+        <div class="panel-head"><div><span class="eyebrow">DAĞILIM</span><h2>Parite Payları</h2></div><span class="live-tag">VERİ SETİ</span></div>
         <div id="pairChart" class="chart-box donut"></div>
     </article>
     <article class="panel pressure-panel">
@@ -56,9 +58,9 @@
         <div id="tradeTypeChart" class="mini-chart"></div>
     </article>
     <article class="panel capacity-panel">
-        <div class="panel-head"><div><span class="eyebrow">ALTYAPI</span><h2>İşleme Kapasitesi</h2></div><span class="status-ok">STABİL</span></div>
-        <div class="capacity-ring" style="--value:@Model.ServerCapacityUsage.ToString(CultureInfo.InvariantCulture)"><div><strong>%@Model.ServerCapacityUsage</strong><small>Kullanım</small></div></div>
-        <div class="capacity-meta"><span>İşlenen veri <b>@Model.Summary.TotalTrades.ToString("N0")</b></span><span>Hedef <b>1.35M</b></span></div>
+        <div class="panel-head"><div><span class="eyebrow">VERİ SETİ</span><h2>Bir Milyon Kayıt Hedefi</h2></div><span class="status-ok">GÜNCEL</span></div>
+        <div class="capacity-ring" style="--value:@Model.DatasetTargetUsage.ToString(CultureInfo.InvariantCulture)"><div><strong>%@Model.DatasetTargetUsage</strong><small>Tamamlanma</small></div></div>
+        <div class="capacity-meta"><span>Mevcut kayıt <b>@Model.Summary.TotalTrades.ToString("N0")</b></span><span>Case hedefi <b>1M</b></span></div>
     </article>
     <article class="panel map-panel">
         <div class="panel-head"><div><span class="eyebrow">KÜRESEL AKTİVİTE</span><h2>İşlem Yoğunluk Haritası</h2></div><span class="panel-pill">Top 10 ülke</span></div>
@@ -91,7 +93,8 @@
             trend: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.VolumeTrend.Select(x => new { date = x.TradeDate.ToString("yyyy-MM-dd"), volume = x.Volume }))),
             pairs: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PairDistribution.Select(x => new { pair = x.CryptoPair, count = x.TradeCount }))),
             types: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TradeTypeDistribution.Select(x => new { type = x.TradeType, count = x.TradeCount }))),
-            countries: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CountryActivity.Select(x => new { country = x.LocationCountry, count = x.TradeCount, volume = x.Volume, lat = x.Latitude, lng = x.Longitude })))
+            countries: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CountryActivity.Select(x => new { country = x.LocationCountry, count = x.TradeCount, volume = x.Volume, lat = x.Latitude, lng = x.Longitude }))),
+            totalTrades: @Model.Summary.TotalTrades
         };
     </script>
     <script src="~/js/dashboard.js" asp-append-version="true"></script>

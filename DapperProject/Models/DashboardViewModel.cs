@@ -9,7 +9,9 @@ public sealed class DashboardViewModel
     public IReadOnlyList<TradeLog> TopTransactions { get; init; } = [];
     public IReadOnlyList<CountryActivity> CountryActivity { get; init; } = [];
     public decimal BuyPressure { get; init; }
-    public decimal ServerCapacityUsage { get; init; }
+    public decimal VolumeChangePercentage { get; init; }
+    public decimal FeeChangePercentage { get; init; }
+    public decimal DatasetTargetUsage { get; init; }
 }
 
 public sealed class DashboardSummary
@@ -19,6 +21,11 @@ public sealed class DashboardSummary
     public string HighestVolumePair { get; set; } = "—";
     public decimal AverageExecutionTime { get; set; }
     public int TotalTrades { get; set; }
+    public decimal CurrentPeriodVolume { get; set; }
+    public decimal PreviousPeriodVolume { get; set; }
+    public decimal CurrentPeriodFees { get; set; }
+    public decimal PreviousPeriodFees { get; set; }
+    public DateTime? LatestTransactionDate { get; set; }
 }
 
 public sealed class VolumePoint

@@ -111,10 +111,10 @@
                 <label>İşlem Türü<select name="TradeType" id="editType" required><option>BUY</option><option>SELL</option></select></label>
                 <label>Fiyat (USD)<input type="number" name="Price" id="editPrice" min="0.00000001" step="0.00000001" required /></label>
                 <label>Miktar<input type="number" name="Quantity" id="editQuantity" min="0.00000001" step="0.00000001" required /></label>
-                <label>Komisyon (USD)<input type="number" name="FeeUSD" id="editFee" min="0" step="0.0001" required /></label>
-                <label>Ülke<input name="LocationCountry" id="editCountry" maxlength="60" required /></label>
+                <label>Komisyon (otomatik hesaplanır)<input type="number" name="FeeUSD" id="editFee" min="0" step="0.0001" readonly /></label>
+                <label>Ülke<select name="LocationCountry" id="editCountry" required><option>Türkiye</option><option>ABD</option><option>Almanya</option><option>Birleşik Krallık</option><option>Japonya</option><option>Güney Kore</option><option>Singapur</option><option>Brezilya</option><option>Kanada</option><option>Fransa</option><option>Hindistan</option><option>BAE</option></select></label>
                 <label>İşlem Hızı (ms)<input type="number" name="ExecutionTimeMs" id="editSpeed" min="1" max="10000" required /></label>
-                <label class="full">İşlem Tarihi<input type="datetime-local" name="TransactionDate" id="editDate" required /></label>
+                <label class="full">İşlem Tarihi (UTC)<input type="datetime-local" name="TransactionDate" id="editDate" required /></label>
             </div></div>
             <div class="modal-footer"><button type="button" class="btn-cancel" data-bs-dismiss="modal">Vazgeç</button><button type="submit" class="btn-primary-fintech">Değişiklikleri Kaydet</button></div>
         </form>

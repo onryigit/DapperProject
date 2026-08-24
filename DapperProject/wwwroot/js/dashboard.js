@@ -19,7 +19,7 @@
         series: data.pairs.map(x => x.count), labels: data.pairs.map(x => x.pair),
         colors: [green, '#25a8ff', '#8b5cf6', '#f0b90b', '#fb7185', '#14b8a6', '#f97316', '#64748b'],
         stroke: { width: 3, colors: ['#171c22'] }, legend: { position: 'bottom', fontSize: '11px', markers: { width: 7, height: 7, radius: 7 } },
-        dataLabels: { enabled: false }, plotOptions: { pie: { donut: { size: '70%', labels: { show: true, name: { color: text }, value: { color: '#f5f7fa', fontWeight: 700 }, total: { show: true, label: 'TOPLAM', color: text, formatter: () => '1.0M' } } } } },
+        dataLabels: { enabled: false }, plotOptions: { pie: { donut: { size: '70%', labels: { show: true, name: { color: text }, value: { color: '#f5f7fa', fontWeight: 700 }, total: { show: true, label: 'TOPLAM', color: text, formatter: () => data.totalTrades.toLocaleString('tr-TR') } } } } },
         tooltip: { theme: 'dark', y: { formatter: v => v.toLocaleString('tr-TR') + ' işlem' } }
     }).render();
 
