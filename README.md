@@ -101,98 +101,6 @@ flowchart LR
 
 ```
 
-### Uygulama Başlangıcı ve Veri Üretimi
-
-İlk başlangıçta `DatabaseSeeder`, veritabanını ve tabloları otomatik olarak hazırlar. Kayıtlar bellekte 50.000 satırlık partiler halinde oluşturulur ve `SqlBulkCopy` ile SQL Server'a aktarılır. Seed tamamlandıktan sonra sorgu performansı için gerekli indeksler oluşturulur.
-
-```mermaid
-flowchart TD
-    Start["Uygulama Başlatılır"] --> ReadConfig["Bağlantı ve seed ayarları okunur"]
-    ReadConfig --> ConnectMaster["SQL Server master veritabanına bağlanılır"]
-    ConnectMaster --> DatabaseCheck{"TradePulseDb mevcut mu?"}
-    DatabaseCheck -->|"Hayır"| CreateDatabase["TradePulseDb oluşturulur"]
-    DatabaseCheck -->|"Evet"| OpenDatabase["Uygulama veritabanına bağlanılır"]
-    CreateDatabase --> OpenDatabase
-    OpenDatabase --> EnsureSchema["TradeLogs ve SeedHistory şeması doğrulanır"]
-    EnsureSchema --> SeedCheck{"SeedHistory kaydı mevcut mu?"}
-    SeedCheck -->|"Evet"| EnsureIndexes["Performans indeksleri doğrulanır"]
-    SeedCheck -->|"Hayır"| PrepareBatch["Tutarlı sentetik işlem kayıtları üretilir"]
-    PrepareBatch --> BulkCopy["50.000 satırlık SqlBulkCopy işlemi"]
-    BulkCopy --> MoreRows{"1.000.000 kayıt tamamlandı mı?"}
-    MoreRows -->|"Hayır"| PrepareBatch
-    MoreRows -->|"Evet"| SaveHistory["SeedHistory kaydı eklenir"]
-    SaveHistory --> EnsureIndexes
-    EnsureIndexes --> RunApp["MVC uygulaması istek kabul etmeye başlar"]
-```
-
-### Dashboard İstek Akışı
-
-Dashboard için gerekli özet, trend, dağılım, Top 5 işlem ve ülke verileri tek bağlantıda, tek bir Dapper `QueryMultiple()` çağrısıyla alınır.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Kullanıcı
-    participant UI as Dashboard View
-    participant Controller as DashboardController
-    participant Repository as TradeRepository
-    participant DB as SQL Server
-    participant JS as ApexCharts ve Leaflet
-
-    User->>Controller: GET /Dashboard
-    Controller->>Repository: GetDashboardAsync()
-    Repository->>DB: QueryMultiple ile 6 sonuç seti
-    DB-->>Repository: Özet, trend, dağılımlar, Top 5 ve ülkeler
-    Repository->>Repository: Yüzdeleri ve harita koordinatlarını hesapla
-    Repository-->>Controller: DashboardViewModel
-    Controller-->>UI: Razor View oluştur
-    UI-->>User: HTML dashboard
-    UI->>JS: Grafik ve harita verilerini aktar
-    JS-->>User: İnteraktif grafikler ve yoğunluk haritası
-```
-
-### Veri Yönetimi Akışı
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Kullanıcı
-    participant UI as Trades View
-    participant Controller as TradesController
-    participant Repository as TradeRepository
-    participant DB as SQL Server
-
-    User->>Controller: GET /Trades?page=1&pageSize=20
-    Controller->>Controller: Sayfa parametrelerini doğrula
-    Controller->>Repository: GetPagedAsync()
-    Repository->>DB: COUNT ve OFFSET/FETCH sorgusu
-    DB-->>Repository: Toplam sayı ve sayfa kayıtları
-    Repository-->>UI: PagedResult
-    UI-->>User: Sayfalanmış veri tablosu
-
-    User->>Controller: GET /Trades/{id}
-    Controller->>Repository: GetByIdAsync(id)
-    Repository->>DB: Primary key sorgusu
-    DB-->>Repository: İşlem kaydı
-    Repository-->>Controller: TradeLog
-    Controller-->>User: JSON işlem detayı
-
-    User->>Controller: POST /Trades/Update
-    Controller->>Controller: Anti-forgery ve model doğrulama
-    Controller->>Repository: UpdateAsync(trade)
-    Repository->>Repository: Toplam ve komisyonu yeniden hesapla
-    Repository->>DB: Parametreli UPDATE
-    DB-->>Repository: Etkilenen satır sayısı
-    Repository-->>Controller: Güncelleme sonucu
-    Controller-->>User: Başarı veya hata bildirimi
-
-    User->>Controller: POST /Trades/Delete/{id}
-    Controller->>Controller: Anti-forgery doğrulaması
-    Controller->>Repository: DeleteAsync(id)
-    Repository->>DB: Parametreli DELETE
-    DB-->>Repository: Etkilenen satır sayısı
-    Repository-->>Controller: Silme sonucu
-    Controller-->>User: Başarı veya hata bildirimi
 ```
 
 ## Veri Seti
@@ -257,64 +165,6 @@ DapperProject/
 └── Program.cs                    # DI, middleware ve başlangıç akışı
 ```
 
-## Kurulum ve Çalıştırma
-
-### Gereksinimler
-
-- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- Microsoft SQL Server
-- Veritabanı oluşturma yetkisine sahip bir SQL Server kullanıcısı
-- Harita, font ve grafik CDN kaynakları için internet bağlantısı
-
-### 1. Bağlantı dizesini yapılandırın
-
-`DapperProject/appsettings.json` içindeki bağlantı dizesini SQL Server ortamınıza göre düzenleyin:
-
-```json
-{
-  "ConnectionStrings": {
-    "TradePulse": "Server=.;Database=TradePulseDb;Integrated Security=true;Encrypt=False;TrustServerCertificate=true;MultipleActiveResultSets=true"
-  }
-}
-```
-
-### 2. Bağımlılıkları yükleyin
-
-```bash
-dotnet restore
-```
-
-### 3. Uygulamayı çalıştırın
-
-```bash
-dotnet run --project DapperProject/TradePulse.csproj
-```
-
-İlk çalıştırmada veritabanı hazırlanırken 1 milyon kayıt yüklendiği için başlangıç normalden uzun sürebilir. Terminalde seed ilerlemesi gösterilir. Sonraki başlangıçlarda `SeedHistory` kontrolü sayesinde aynı veri seti yeniden oluşturulmaz.
-
-Uygulama varsayılan geliştirme profiliyle aşağıdaki adreslerden açılır:
-
-- `https://localhost:7187/Dashboard`
-- `https://localhost:7187/Trades`
-
-## Yapılandırma
-
-Seed davranışı `appsettings.json` üzerinden değiştirilebilir:
-
-```json
-{
-  "TradePulse": {
-    "SeedRecordCount": 1000000,
-    "BulkBatchSize": 50000
-  }
-}
-```
-
-| Ayar | Varsayılan | Açıklama |
-|---|---:|---|
-| `SeedRecordCount` | 1.000.000 | İlk kurulumda üretilecek kayıt sayısı |
-| `BulkBatchSize` | 50.000 | Her `SqlBulkCopy` işlemindeki satır sayısı |
-
 ## Uygulama Rotaları
 
 | Metot | Rota | Açıklama |
@@ -341,4 +191,3 @@ Bu proje aşağıdaki konularda uygulamalı örnek sunar:
 
 ---
 
-TradePulse, eğitim ve portföy amacıyla geliştirilmiş bir veri analizi uygulamasıdır.
